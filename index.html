@@ -372,7 +372,7 @@
             <button id="drawerRandomButton" class="generate" type="button">GENERATE</button>
             <button id="closeDrawerButton" type="button" style="grid-column: 1 / -1">CLOSE</button>
           </div>
-          <div class="small">OBVS v0.1.2 · No patient data is stored or transmitted.</div>
+          <div class="small">OBVS v0.1.3 · No patient data is stored or transmitted.</div>
         </aside>
         <div id="toast" class="toast" role="status" aria-live="polite">New observations generated</div>
       </div>
@@ -447,6 +447,11 @@
           hr = int(78, 168); spo2 = int(89, 99); sys = int(86, 168); dia = int(50, 98); temp = rand(35.8, 38.2); rhythm = 'Atrial fibrillation'; break;
       }
 
+      // Simulation requirement: SpO₂ is deliberately binary. When connected it
+      // always reads 100%; otherwise the sensor is shown as disconnected.
+      const spo2Connected = Math.random() >= 0.5;
+      spo2 = 100;
+
       if (dia >= sys - 18) dia = sys - int(20, 42);
       const map = Math.round(dia + (sys - dia) / 3);
       const ibpSys = clamp(sys + int(-2, 9), 45, 260);
@@ -454,7 +459,7 @@
       const ibpMap = Math.round(ibpDia + (ibpSys - ibpDia) / 3);
 
       return {
-        profile, rhythm, hr, spo2,
+        profile, rhythm, hr, spo2, spo2Connected,
         nibpSys: sys, nibpDia: dia, nibpMap: map,
         ibpSys, ibpDia, ibpMap,
         temp: Math.round(temp * 10) / 10
@@ -517,9 +522,9 @@
           <article class="channel" data-channel="spo2">
             <div class="numeric spo2">
               <div class="label"><span>SpO₂</span><span class="unit">%</span></div>
-              <div class="main">${observations.spo2}</div>
-              <div class="sub">PR ${observations.hr}</div>
-              <div class="mini">Signal good</div>
+              <div class="main">${observations.spo2Connected ? '100' : '---'}</div>
+              <div class="sub">${observations.spo2Connected ? ('PR ' + observations.hr) : 'PR ---'}</div>
+              <div class="mini">${observations.spo2Connected ? 'Signal good' : 'Sensor disconnected'}</div>
             </div>
             <div class="wave-wrap" style="color: var(--spo2)">
               <span class="lead-tag">PLETH</span><span class="gain">AUTO</span>
@@ -658,7 +663,9 @@
         drawTrace(height * 0.29, height * 0.18, t => ecgValue(t, 2, observations.rhythm));
         drawTrace(height * 0.77, height * 0.16, t => ecgValue(t + 0.012, 1, observations.rhythm));
       } else if (type === 'spo2') {
-        drawTrace(height * 0.87, height * 0.67, plethValue);
+        if (observations.spo2Connected) {
+          drawTrace(height * 0.87, height * 0.67, plethValue);
+        }
       } else if (type === 'ibp') {
         drawTrace(height * 0.88, height * 0.70, arterialValue);
       }
